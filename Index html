@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>تطبيق الصيدليات</title>
+    <style>
+        /* إعدادات عامة والوضع الداكن الحديث (تدرجات الأزرق) */
+        :root {
+            /* التدرجات الأساسية بناءً على الصورة المرفقة */
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #020617 100%);
+            --card-gradient: linear-gradient(145deg, #1e293b 0%, #0f172a 100%);
+            --primary-gradient: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+            --danger-gradient: linear-gradient(135deg, #f43f5e 0%, #e11d48 100%);
+            
+            --primary-solid: #3b82f6;
+            --danger-color: #f43f5e;
+            --success-color: #10b981;
+            --text-main: #2563eb;
+            --text-muted: #394C7C;
+            --border-color: #214274;
+            --overlay-bg: rgba(2, 6, 23, 0.8);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background: var(--bg-gradient);
+            background-attachment: fixed;
+            color: var(--text-main);
+            user-select: none; 
+            -webkit-user-select: none;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+
+        input, textarea {
+            user-select: auto;
+            -webkit-user-select: auto;
+        }
+
+        /* تخطيط الشاشات */
+        .screen {
+            display: none;
+            flex-direction: column;
+            height: 100vh;
+            width: 100vw;
+            position: absolute;
+            top: 0;
+            left: 0;
+            background: transparent;
+            z-index: 1;
+        }
+
+        .screen.active {
+            display: flex;
+        }
+
+        /* الشريط العلوي */
+        .header {
+            background: var(--primary-gradient);
+            height: 65px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 10px;
+            position: relative;
+            z-index: 10;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+
+        .header h1 {
+            color: #ffffff;
+            font-size: 20px;
+            font-weight: bold;
+            flex-grow: 1;
+            text-align: center;
+            pointer-events: none;
+            text-shadow: 0 1px 3px rgba(0,0,0,0.3);
+        }
+
+        .header-side {
+            width: 45px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .icon-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+        }
+
+        .icon-btn:active {
+            background-color: rgba(255,255,255,0.2);
+        }
+
+        .icon-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: #ffffff;
+            filter: drop-shadow(0 1px 1px rgba(0,0,0,0.2));
+        }
+
+        /* القائمة المنسدلة للحذف (Popup) */
+        .dropdown-menu {
+            position: absolute;
+            top: 60px;
+            right: 5px;
+            background: var(--card-gradient);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+            width: 170px;
+            display: none;
+            flex-direction: column;
+            z-index: 100;
+            overflow: hidden;
+            transform-origin: top right;
+            animation: dropFade 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes dropFade {
+            from { opacity: 0; transform: scale(0.9) translateY(-10px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
+
+        .dropdown-menu.show {
+            display: flex;
+        }
+
+        .dropdown-item {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            padding: 14px 16px;
+            gap: 12px;
+            cursor: pointer;
+            border-bottom: 1px solid var(--border-color);
+            transition: background 0.2s;
+        }
+
+        .dropdown-item:last-child {
+            border-bottom: none;
+        }
+
+        .dropdown-item:active {
+            background: rgba(59, 130, 246, 0.15);
+        }
+
+        .dropdown-item span {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .dropdown-item svg {
+            width: 20px;
+            height: 20px;
+            fill: var(--primary-solid);
+        }
+
+        /* شريط البحث المنزلق */
+        .search-bar-container {
+            position: absolute;
+            top: 65px; 
+            left: 0;
+            width: 100%;
+            background: var(--card-gradient);
+            padding: 12px 15px;
+            transform: translateY(-100%);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 5;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.4);
+            pointer-events: none;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .search-bar-container.show {
+            transform: translateY(0);
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 12px 20px;
+            border-radius: 25px;
+            border: 1px solid var(--border-color);
+            background-color: #0f172a;
+            color: var(--text-main);
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.3s, box-shadow 0.3s;
+        }
+
+        .search-input:focus {
+            border-color: var(--primary-solid);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.3);
+        }
+
+        /* منطقة المحتوى */
+        .content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 15px;
+            padding-bottom: 90px;
+            position: relative;
+            z-index: 1;
+            transition: padding-top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .content.with-search {
+            padding-top: 80px; 
+        }
+
+        /* البطاقات المتدرجة */
+        .card {
+            background: var(--card-gradient);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 18px 15px;
+            margin-bottom: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: transform 0.1s, box-shadow 0.1s, border-color 0.2s;
+            cursor: pointer;
+        }
+
+        .card:active {
+            transform: scale(0.97);
+            border-color: var(--primary-solid);
+        }
+
+        .card-inner {
+            display: flex;
+            width: 100%;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .card-inner.ltr-layout {
+            flex-direction: row-reverse;
+        }
+
+        .card-title {
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--text-main);
+            flex-grow: 1;
+            word-break: break-word;
+        }
+
+        .card-title.rtl-text { text-align: right; }
+        .card-title.ltr-text { text-align: left; }
+
+        .card-action-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            background: var(--danger-gradient);
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        .card-inner.ltr-layout .card-action-btn { margin-left: 15px; margin-right: 0; }
+        .card-inner:not(.ltr-layout) .card-action-btn { margin-right: 15px; margin-left: 0; }
+        
+        .card-action-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: #ffffff;
+        }
+
+        /* الزر العائم */
+        .fab {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 6px 15px rgba(0,0,0,0.6);
+            border: none;
+            cursor: pointer;
+            z-index: 20;
+            transition: transform 0.2s;
+        }
+
+        .fab:active { transform: scale(0.9); }
+
+        .fab svg {
+            width: 30px;
+            height: 30px;
+            fill: #ffffff;
+        }
+
+        /* النافذة السفلية (Bottom Sheet) */
+        .bottom-sheet-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--overlay-bg);
+            z-index: 30;
+            display: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+            backdrop-filter: blur(4px);
+        }
+
+        .bottom-sheet-overlay.show { display: block; opacity: 1; }
+
+        .bottom-sheet {
+            position: fixed;
+            bottom: -100%;
+            left: 0;
+            width: 100%;
+            background: #0f172a; 
+            border-top-left-radius: 24px;
+            border-top-right-radius: 24px;
+            padding: 25px 20px;
+            z-index: 31;
+            transition: bottom 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 -5px 25px rgba(0,0,0,0.7);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .bottom-sheet.show { bottom: 0; }
+
+        .sheet-card {
+            background: var(--card-gradient);
+            border-radius: 16px;
+            padding: 15px 20px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            cursor: pointer;
+            border: 1px solid var(--border-color);
+            transition: transform 0.1s, border-color 0.2s;
+        }
+        
+        .sheet-card:active { transform: scale(0.98); border-color: var(--primary-solid); }
+        .sheet-card:last-child { margin-bottom: 10px; }
+
+        .sheet-option-text {
+            font-size: 16px;
+            font-weight: bold;
+            margin-left: 20px;
+            color: var(--text-main);
+        }
+
+        .sheet-option-icon {
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: var(--primary-gradient);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .sheet-option-icon svg { width: 24px; height: 24px; fill: #ffffff; }
+
+        /* النوافذ المنبثقة (Modals) */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background-color: var(--overlay-bg);
+            z-index: 40;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(4px);
+        }
+
+        .modal-overlay.show { display: flex; }
+
+        .modal-content {
+            background: var(--card-gradient);
+            border-radius: 20px;
+            width: 100%;
+            max-width: 380px;
+            padding: 25px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.7);
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            border: 1px solid var(--border-color);
+            position: relative; /* مهم للقائمة المنسدلة المخصصة داخل النافذة */
+        }
+
+        @keyframes popIn {
+            from { transform: scale(0.9); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+
+        .modal-title {
+            font-size: 20px;
+            color: var(--text-main);
+            margin-bottom: 20px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        .form-group { margin-bottom: 18px; position: relative; }
+
+        /* حقل الإدخال العادي */
+        .form-control {
+            width: 100%;
+            padding: 14px;
+            background-color: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .form-control:focus { border-color: var(--primary-solid); }
+
+        /* ستايل القائمة المنسدلة المخصصة للمناطق */
+        .custom-select-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .custom-select-display {
+            width: 100%;
+            padding: 14px;
+            background-color: #0f172a;
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            color: var(--text-main);
+            font-size: 15px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: border-color 0.3s;
+            font-weight: bold;
+        }
+        
+        .custom-select-wrapper.active .custom-select-display {
+            border-color: var(--primary-solid);
+        }
+
+        .custom-select-display::after {
+            content: '';
+            width: 0; 
+            height: 0; 
+            border-left: 6px solid transparent;
+            border-right: 6px solid transparent;
+            border-top: 6px solid #94a3b8;
+            transition: transform 0.3s;
+        }
+
+        .custom-select-wrapper.active .custom-select-display::after {
+            transform: rotate(180deg);
+            border-top-color: var(--primary-solid);
+        }
+
+        .custom-select-dropdown {
+            position: absolute;
+            top: calc(100% + 5px);
+            left: 0;
+            width: 100%;
+            background: var(--card-gradient);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            max-height: 180px;
+            overflow-y: auto;
+            z-index: 100;
+            display: none;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.8);
+            animation: dropFade 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        .custom-select-dropdown.show {
+            display: block;
+        }
+
+        .custom-option {
+            padding: 14px 16px;
+            color: var(--text-main);
+            border-bottom: 1px solid var(--border-color);
+            cursor: pointer;
+            font-weight: bold;
+            transition: background 0.2s;
+        }
+
+        .custom-option:last-child {
+            border-bottom: none;
+        }
+
+        .custom-option:hover, .custom-option:active {
+            background: rgba(59, 130, 246, 0.15);
+        }
+
+        .custom-select-wrapper.disabled .custom-select-display {
+            opacity: 0.6;
+            cursor: not-allowed;
+            pointer-events: none;
+        }
+
+        .modal-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 25px;
+            gap: 12px;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border-radius: 12px;
+            border: none;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            flex: 1;
+            transition: opacity 0.2s, transform 0.1s;
+        }
+        
+        .btn:active { opacity: 0.8; transform: scale(0.96); }
+
+        .btn-primary {
+            background: var(--primary-gradient);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(59, 130, 246, 0.4);
+        }
+
+        .btn-danger-solid {
+            background: var(--danger-gradient);
+            color: #ffffff;
+            box-shadow: 0 4px 10px rgba(244, 63, 94, 0.4);
+        }
+
+        .btn-cancel {
+            background: #1e293b;
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+        }
+
+        .empty-state {
+            text-align: center;
+            color: var(--text-muted);
+            margin-top: 60px;
+            font-size: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .empty-state svg {
+            width: 60px;
+            height: 60px;
+            fill: #475569;
+        }
+
+        .hidden { display: none !important; }
+
+        /* --- الإضافات المطلوبة (إطار أزرق للبطاقات) --- */
+        .card {
+            border: 1px solid #3b82f6 !important; /* لون الإطار الأزرق */
+        }
+        .sheet-card {
+            border: 1px solid #3b82f6 !important; /* للبطاقات السفلية أيضاً */
+        }
+
+    </style>
+</head>
+<body>
+
+    <input type="file" id="csv-file-input" accept=".csv" class="hidden">
+
+    <div id="main-screen" class="screen active">
+        <div class="header">
+            <div class="header-side">
+                <button class="icon-btn" onclick="toggleDeleteDropdown(event)">
+                    <svg viewBox="0 0 24 24"><path d="M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z"/></svg>
+                </button>
+                <div id="delete-dropdown" class="dropdown-menu">
+                    <div class="dropdown-item" onclick="openDeleteRegionsScreen()">
+                        <span>حذف منطقة</span>
+                        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </div>
+                    <div class="dropdown-item" onclick="openDeleteShopsSelectScreen()">
+                        <span>حذف صيدلية</span>
+                        <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                    </div>
+                </div>
+            </div>
+            
+            <h1>المناطق</h1>
+            
+            <div class="header-side">
+                <button class="icon-btn" onclick="toggleSearch('main', 'regions-list')">
+                    <svg id="main-search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <svg id="main-close-icon" class="hidden" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="search-bar-container" id="main-search-container">
+            <input type="text" id="main-search-input" class="search-input" placeholder="البحث عن منطقة...">
+        </div>
+
+        <div class="content" id="regions-list"></div>
+
+        <button class="fab" onclick="openBottomSheet('main')">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        </button>
+    </div>
+
+    <div id="region-screen" class="screen">
+        <div class="header">
+            <div class="header-side">
+                <button class="icon-btn" onclick="goBack('main-screen')">
+                    <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" transform="rotate(180 12 12)"/></svg>
+                </button>
+            </div>
+            <h1 id="current-region-title">اسم المنطقة</h1>
+            <div class="header-side">
+                <button class="icon-btn" onclick="toggleSearch('region', 'shops-list')">
+                    <svg id="region-search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <svg id="region-close-icon" class="hidden" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+        </div>
+
+        <div class="search-bar-container" id="region-search-container">
+            <input type="text" id="region-search-input" class="search-input" placeholder="البحث عن صيدليات...">
+        </div>
+
+        <div class="content" id="shops-list"></div>
+
+        <button class="fab" onclick="openBottomSheet('region')">
+            <svg viewBox="0 0 24 24"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+        </button>
+    </div>
+
+    <div id="delete-regions-screen" class="screen">
+        <div class="header">
+            <div class="header-side">
+                <button class="icon-btn" onclick="goBack('main-screen')">
+                    <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" transform="rotate(180 12 12)"/></svg>
+                </button>
+            </div>
+            <h1>حذف منطقة</h1>
+            <div class="header-side">
+                <button class="icon-btn" onclick="toggleSearch('del-reg', 'delete-regions-list')">
+                    <svg id="del-reg-search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <svg id="del-reg-close-icon" class="hidden" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+        </div>
+        <div class="search-bar-container" id="del-reg-search-container">
+            <input type="text" id="del-reg-search-input" class="search-input" placeholder="البحث عن منطقة للحذف...">
+        </div>
+        <div class="content" id="delete-regions-list"></div>
+    </div>
+
+    <div id="delete-shops-select-screen" class="screen">
+        <div class="header">
+            <div class="header-side">
+                <button class="icon-btn" onclick="goBack('main-screen')">
+                    <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" transform="rotate(180 12 12)"/></svg>
+                </button>
+            </div>
+            <h1>إختر منطقة للحدف منها</h1>
+            <div class="header-side">
+                <button class="icon-btn" onclick="toggleSearch('del-shop-sel', 'delete-shops-select-list')">
+                    <svg id="del-shop-sel-search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <svg id="del-shop-sel-close-icon" class="hidden" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+        </div>
+        <div class="search-bar-container" id="del-shop-sel-search-container">
+            <input type="text" id="del-shop-sel-search-input" class="search-input" placeholder="البحث عن منطقة...">
+        </div>
+        <div class="content" id="delete-shops-select-list"></div>
+    </div>
+
+    <div id="delete-shops-list-screen" class="screen">
+        <div class="header">
+            <div class="header-side">
+                <button class="icon-btn" onclick="goBack('delete-shops-select-screen')">
+                    <svg viewBox="0 0 24 24"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z" transform="rotate(180 12 12)"/></svg>
+                </button>
+            </div>
+            <h1 id="del-shop-list-title">حذف صيدليات</h1>
+            <div class="header-side">
+                <button class="icon-btn" onclick="toggleSearch('del-shop-list', 'delete-shops-list-content')">
+                    <svg id="del-shop-list-search-icon" viewBox="0 0 24 24"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <svg id="del-shop-list-close-icon" class="hidden" viewBox="0 0 24 24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+                </button>
+            </div>
+        </div>
+        <div class="search-bar-container" id="del-shop-list-search-container">
+            <input type="text" id="del-shop-list-search-input" class="search-input" placeholder="البحث عن صيدلية للحذف...">
+        </div>
+        <div class="content" id="delete-shops-list-content"></div>
+    </div>
+
+
+    <div class="bottom-sheet-overlay" id="bottom-sheet-overlay" onclick="closeBottomSheet()"></div>
+    <div class="bottom-sheet" id="bottom-sheet">
+        <div id="main-sheet-options">
+            <div class="sheet-card" onclick="openModal('add-region-modal'); closeBottomSheet()">
+                <span class="sheet-option-text">إضافة منطقة</span>
+                <div class="sheet-option-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/></svg>
+                </div>
+            </div>
+            <div class="sheet-card" onclick="openAddShopModal(); closeBottomSheet()">
+                <span class="sheet-option-text">إضافة صيدلية</span>
+                <div class="sheet-option-icon">
+                    <svg viewBox="0 0 24 24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
+                </div>
+            </div>
+        </div>
+        <div id="region-sheet-options" class="hidden">
+            <div class="sheet-card" onclick="openAddShopModal(currentRegionId); closeBottomSheet()">
+                <span class="sheet-option-text">إضافة صيدلية</span>
+                <div class="sheet-option-icon">
+                    <svg viewBox="0 0 24 24"><path d="M20 6h-4V4c0-1.11-.89-2-2-2h-4c-1.11 0-2 .89-2 2v2H4c-1.11 0-1.99.89-1.99 2L2 19c0 1.11.89 2 2 2h16c1.11 0 2-.89 2-2V8c0-1.11-.89-2-2-2zm-6 0h-4V4h4v2z"/></svg>
+                </div>
+            </div>
+            <div class="sheet-card" onclick="triggerCSVUpload(); closeBottomSheet()">
+                <span class="sheet-option-text">استرداد خارجي (CSV)</span>
+                <div class="sheet-option-icon">
+                    <svg viewBox="0 0 24 24"><path d="M9 16h6v-6h4l-7-7-7 7h4zm-4 2h14v2H5z"/></svg>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="add-region-modal">
+        <div class="modal-content">
+            <h2 class="modal-title">إضافة منطقة</h2>
+            <div class="form-group">
+                <input type="text" id="new-region-name" class="form-control" placeholder="اسم المنطقة">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeModal('add-region-modal')">إلغاء</button>
+                <button class="btn btn-primary" onclick="addRegion()">إضافة</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="edit-region-modal">
+        <div class="modal-content">
+            <h2 class="modal-title">تعديل المنطقة</h2>
+            <input type="hidden" id="edit-region-id">
+            <div class="form-group">
+                <input type="text" id="edit-region-name" class="form-control" placeholder="اسم المنطقة">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeModal('edit-region-modal')">إلغاء</button>
+                <button class="btn btn-primary" onclick="saveRegionEdit()">حفظ</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="add-shop-modal">
+        <div class="modal-content">
+            <h2 class="modal-title">إضافة صيدلية</h2>
+            
+            <div class="form-group">
+                <div class="custom-select-wrapper" id="custom-region-wrapper">
+                    <div class="custom-select-display" id="custom-region-display" onclick="toggleCustomSelect()">اختر المنطقة</div>
+                    <div class="custom-select-dropdown" id="custom-region-dropdown">
+                        </div>
+                    <input type="hidden" id="shop-region-select">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <input type="text" id="new-shop-name" class="form-control" placeholder="اسم الصيدلية">
+            </div>
+            <div class="form-group">
+                <input type="url" id="new-shop-link" class="form-control" placeholder="رابط الموقع (مثال: خرائط جوجل)">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeModal('add-shop-modal')">إلغاء</button>
+                <button class="btn btn-primary" onclick="addShop()">إضافة</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="edit-shop-modal">
+        <div class="modal-content">
+            <h2 class="modal-title">تعديل الصيدلية</h2>
+            <input type="hidden" id="edit-shop-id">
+            <div class="form-group">
+                <input type="text" id="edit-shop-name" class="form-control" placeholder="اسم الصيدلية">
+            </div>
+            <div class="form-group">
+                <input type="url" id="edit-shop-link" class="form-control" placeholder="رابط الموقع">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeModal('edit-shop-modal')">إلغاء</button>
+                <button class="btn btn-primary" onclick="saveShopEdit()">حفظ</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="confirm-delete-modal">
+        <div class="modal-content">
+            <h2 class="modal-title" style="color: var(--danger-color);">تأكيد الحذف</h2>
+            <p style="text-align: center; margin-bottom: 20px; font-size: 15px; color: var(--text-muted);">هل أنت متأكد من عملية الحذف؟ لا يمكن التراجع عن هذا الإجراء.</p>
+            <input type="hidden" id="delete-target-id">
+            <input type="hidden" id="delete-target-type"> 
+            <div class="modal-actions">
+                <button class="btn btn-cancel" onclick="closeModal('confirm-delete-modal')">إلغاء</button>
+                <button class="btn btn-danger-solid" onclick="executeDelete()">حذف</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="custom-alert-modal">
+        <div class="modal-content" style="text-align: center;">
+            <div id="alert-icon-container" style="margin-bottom: 15px;">
+                </div>
+            <h2 class="modal-title" id="custom-alert-title" style="margin-bottom: 10px;">تنبيه</h2>
+            <p style="margin-bottom: 25px; font-size: 15px; color: var(--text-muted); line-height: 1.5;" id="custom-alert-message"></p>
+            <div class="modal-actions">
+                <button class="btn btn-primary" style="width: 100%; flex: none;" onclick="closeModal('custom-alert-modal')">حسناً</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- إدارة البيانات ---
+        let regions = JSON.parse(localStorage.getItem('regions')) || [];
+        let shops = JSON.parse(localStorage.getItem('shops')) || [];
+        
+        let currentRegionId = null;
+        let deleteFlowRegionId = null;
+
+        function saveData() {
+            localStorage.setItem('regions', JSON.stringify(regions));
+            localStorage.setItem('shops', JSON.stringify(shops));
+        }
+
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+
+        function isArabic(text) {
+            const arabicPattern = /[\u0600-\u06FF\u0750-\u077F]/;
+            return arabicPattern.test(text);
+        }
+
+        function handleInteractionEvents(element, onClick, onLongPress) {
+            let pressTimer;
+            let isLongPress = false;
+
+            const start = (e) => {
+                if (e.type === 'mousedown' && e.button !== 0) return; 
+                isLongPress = false;
+                pressTimer = setTimeout(() => {
+                    isLongPress = true;
+                    if(onLongPress) onLongPress(e);
+                }, 600);
+            };
+
+            const cancel = () => { clearTimeout(pressTimer); };
+
+            const end = (e) => {
+                clearTimeout(pressTimer);
+                if (!isLongPress && onClick) {
+                    onClick(e);
+                }
+            };
+
+            element.addEventListener('touchstart', start, {passive: true});
+            element.addEventListener('touchend', end);
+            element.addEventListener('mousedown', start);
+            element.addEventListener('mouseup', end);
+            element.addEventListener('mouseleave', cancel);
+            element.addEventListener('touchmove', cancel, {passive: true});
+            element.addEventListener('contextmenu', (e) => { 
+                e.preventDefault(); 
+            });
+        }
+
+        // --- واجهة المستخدم والتنقل ---
+        
+        function switchScreen(screenId) {
+            document.querySelectorAll('.search-bar-container').forEach(el => el.classList.remove('show'));
+            document.querySelectorAll('[id$="-search-icon"]').forEach(el => el.classList.remove('hidden'));
+            document.querySelectorAll('[id$="-close-icon"]').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.search-input').forEach(el => el.value = '');
+            document.querySelectorAll('.content').forEach(el => el.classList.remove('with-search'));
+
+            document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+            document.getElementById(screenId).classList.add('active');
+        }
+
+        function goBack(targetScreen) {
+            switchScreen(targetScreen);
+            if(targetScreen === 'main-screen') renderRegions();
+            if(targetScreen === 'delete-shops-select-screen') renderDeleteShopsSelect();
+        }
+
+        function toggleSearch(prefix, contentId) {
+            const container = document.getElementById(`${prefix}-search-container`);
+            const searchIcon = document.getElementById(`${prefix}-search-icon`);
+            const closeIcon = document.getElementById(`${prefix}-close-icon`);
+            const input = document.getElementById(`${prefix}-search-input`);
+            const contentDiv = document.getElementById(contentId);
+
+            if (container.classList.contains('show')) {
+                container.classList.remove('show');
+                searchIcon.classList.remove('hidden');
+                closeIcon.classList.add('hidden');
+                input.value = ''; 
+                if(contentDiv) contentDiv.classList.remove('with-search');
+                
+                if(prefix === 'main') renderRegions();
+                if(prefix === 'region') renderShops();
+                if(prefix === 'del-reg') renderDeleteRegions();
+                if(prefix === 'del-shop-sel') renderDeleteShopsSelect();
+                if(prefix === 'del-shop-list') renderDeleteShopsList();
+            } else {
+                container.classList.add('show');
+                searchIcon.classList.add('hidden');
+                closeIcon.classList.remove('hidden');
+                if(contentDiv) contentDiv.classList.add('with-search'); 
+                input.focus();
+            }
+        }
+
+        document.getElementById('main-search-input').addEventListener('input', (e) => renderRegions(e.target.value));
+        document.getElementById('region-search-input').addEventListener('input', (e) => renderShops(e.target.value));
+        document.getElementById('del-reg-search-input').addEventListener('input', (e) => renderDeleteRegions(e.target.value));
+        document.getElementById('del-shop-sel-search-input').addEventListener('input', (e) => renderDeleteShopsSelect(e.target.value));
+        document.getElementById('del-shop-list-search-input').addEventListener('input', (e) => renderDeleteShopsList(e.target.value));
+
+        function toggleDeleteDropdown(event) {
+            event.stopPropagation();
+            const dropdown = document.getElementById('delete-dropdown');
+            dropdown.classList.toggle('show');
+        }
+
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('delete-dropdown');
+            if (dropdown && dropdown.classList.contains('show') && !e.target.closest('.header-side')) {
+                dropdown.classList.remove('show');
+            }
+
+            // إغلاق القائمة المنسدلة المخصصة للمناطق عند النقر خارجها
+            if (!e.target.closest('.custom-select-wrapper')) {
+                const regionDropdown = document.getElementById('custom-region-dropdown');
+                const regionWrapper = document.getElementById('custom-region-wrapper');
+                if(regionDropdown) {
+                    regionDropdown.classList.remove('show');
+                    regionWrapper.classList.remove('active');
+                }
+            }
+        });
+
+        function openBottomSheet(screenType) {
+            document.getElementById('bottom-sheet-overlay').classList.add('show');
+            document.getElementById('bottom-sheet').classList.add('show');
+            
+            if (screenType === 'main') {
+                document.getElementById('main-sheet-options').classList.remove('hidden');
+                document.getElementById('region-sheet-options').classList.add('hidden');
+            } else {
+                document.getElementById('main-sheet-options').classList.add('hidden');
+                document.getElementById('region-sheet-options').classList.remove('hidden');
+            }
+        }
+
+        function closeBottomSheet() {
+            document.getElementById('bottom-sheet-overlay').classList.remove('show');
+            document.getElementById('bottom-sheet').classList.remove('show');
+        }
+
+        function openModal(id) { document.getElementById(id).classList.add('show'); }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('show');
+            const inputs = document.getElementById(id).querySelectorAll('input[type="text"], input[type="url"]');
+            inputs.forEach(input => input.value = '');
+            
+            // إعادة ضبط القائمة المنسدلة المخصصة إذا كنا نغلق نافذة إضافة صيدلية
+            if(id === 'add-shop-modal') {
+                document.getElementById('custom-region-dropdown').classList.remove('show');
+                document.getElementById('custom-region-wrapper').classList.remove('active');
+            }
+        }
+
+        // --- رسالة التنبيه المخصصة ---
+        function showCustomAlert(title, message, isSuccess = true) {
+            const modalTitle = document.getElementById('custom-alert-title');
+            const iconContainer = document.getElementById('alert-icon-container');
+            
+            modalTitle.textContent = title;
+            modalTitle.style.color = isSuccess ? 'var(--success-color)' : 'var(--danger-color)';
+            document.getElementById('custom-alert-message').textContent = message;
+
+            if (isSuccess) {
+                iconContainer.innerHTML = `<svg style="width: 50px; height: 50px; fill: var(--success-color);" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>`;
+            } else {
+                iconContainer.innerHTML = `<svg style="width: 50px; height: 50px; fill: var(--danger-color);" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z"/></svg>`;
+            }
+
+            openModal('custom-alert-modal');
+        }
+
+        // --- عرض البيانات (الريندر) ---
+
+        const emptyIcon = `<svg viewBox="0 0 24 24"><path d="M19 3H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm0 16H5V5h14v14z"/><path d="M7 12h10v2H7z"/></svg>`;
+
+        function renderRegions(searchQuery = '') {
+            const container = document.getElementById('regions-list');
+            container.innerHTML = '';
+            let filtered = regions.filter(r => r.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="empty-state">${emptyIcon}لا توجد مناطق.</div>`;
+                return;
+            }
+
+            filtered.forEach(region => {
+                const isAr = isArabic(region.name);
+                const card = document.createElement('div');
+                card.className = 'card';
+                
+                card.innerHTML = `
+                    <div class="card-inner ${isAr ? '' : 'ltr-layout'}">
+                        <div class="card-title ${isAr ? 'rtl-text' : 'ltr-text'}">${region.name}</div>
+                    </div>
+                `;
+
+                handleInteractionEvents(card, 
+                    () => {
+                        currentRegionId = region.id;
+                        document.getElementById('current-region-title').textContent = region.name;
+                        switchScreen('region-screen');
+                        renderShops();
+                    },
+                    () => {
+                        document.getElementById('edit-region-id').value = region.id;
+                        document.getElementById('edit-region-name').value = region.name;
+                        openModal('edit-region-modal');
+                    }
+                );
+
+                container.appendChild(card);
+            });
+        }
+
+        function renderShops(searchQuery = '') {
+            const container = document.getElementById('shops-list');
+            container.innerHTML = '';
+            let filtered = shops.filter(s => s.regionId === currentRegionId);
+            if (searchQuery) filtered = filtered.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+            filtered.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="empty-state">${emptyIcon}لا توجد صيدليات في هذه المنطقة.</div>`;
+                return;
+            }
+
+            filtered.forEach(shop => {
+                const isAr = isArabic(shop.name);
+                const card = document.createElement('div');
+                card.className = 'card';
+                
+                card.innerHTML = `
+                    <div class="card-inner ${isAr ? '' : 'ltr-layout'}">
+                        <div class="card-title ${isAr ? 'rtl-text' : 'ltr-text'}">${shop.name}</div>
+                    </div>
+                `;
+
+                handleInteractionEvents(card,
+                    () => {
+                        if(shop.link) {
+                            let url = shop.link.trim();
+                            if (!/^https?:\/\//i.test(url)) url = 'http://' + url;
+                            window.open(url, '_blank');
+                        } else {
+                            showCustomAlert("عذراً", "لا يوجد رابط مضاف لهذه الصيدلية", false);
+                        }
+                    },
+                    () => {
+                        document.getElementById('edit-shop-id').value = shop.id;
+                        document.getElementById('edit-shop-name').value = shop.name;
+                        document.getElementById('edit-shop-link').value = shop.link || '';
+                        openModal('edit-shop-modal');
+                    }
+                );
+
+                container.appendChild(card);
+            });
+        }
+
+        function openDeleteRegionsScreen() {
+            document.getElementById('delete-dropdown').classList.remove('show');
+            switchScreen('delete-regions-screen');
+            renderDeleteRegions();
+        }
+
+        function renderDeleteRegions(searchQuery = '') {
+            const container = document.getElementById('delete-regions-list');
+            container.innerHTML = '';
+            let filtered = regions.filter(r => r.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="empty-state">${emptyIcon}لا توجد مناطق للحذف.</div>`;
+                return;
+            }
+
+            filtered.forEach(region => {
+                const isAr = isArabic(region.name);
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.cursor = 'default';
+                card.innerHTML = `
+                    <div class="card-inner ${isAr ? '' : 'ltr-layout'}">
+                        <div class="card-title ${isAr ? 'rtl-text' : 'ltr-text'}">${region.name}</div>
+                        <div class="card-action-btn" onclick="requestDelete('${region.id}', 'region')">
+                            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function openDeleteShopsSelectScreen() {
+            document.getElementById('delete-dropdown').classList.remove('show');
+            switchScreen('delete-shops-select-screen');
+            renderDeleteShopsSelect();
+        }
+
+        function renderDeleteShopsSelect(searchQuery = '') {
+            const container = document.getElementById('delete-shops-select-list');
+            container.innerHTML = '';
+            let filtered = regions.filter(r => r.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="empty-state">${emptyIcon}لا توجد مناطق.</div>`;
+                return;
+            }
+
+            filtered.forEach(region => {
+                const isAr = isArabic(region.name);
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.innerHTML = `
+                    <div class="card-inner ${isAr ? '' : 'ltr-layout'}">
+                        <div class="card-title ${isAr ? 'rtl-text' : 'ltr-text'}">${region.name}</div>
+                    </div>
+                `;
+                card.addEventListener('click', () => {
+                    deleteFlowRegionId = region.id;
+                    document.getElementById('del-shop-list-title').textContent = region.name;
+                    switchScreen('delete-shops-list-screen');
+                    renderDeleteShopsList();
+                });
+                container.appendChild(card);
+            });
+        }
+
+        function renderDeleteShopsList(searchQuery = '') {
+            const container = document.getElementById('delete-shops-list-content');
+            container.innerHTML = '';
+            let filtered = shops.filter(s => s.regionId === deleteFlowRegionId);
+            if (searchQuery) filtered = filtered.filter(s => s.name.toLowerCase().includes(searchQuery.toLowerCase()));
+
+            if (filtered.length === 0) {
+                container.innerHTML = `<div class="empty-state">${emptyIcon}لا توجد صيدليات للحذف.</div>`;
+                return;
+            }
+
+            filtered.forEach(shop => {
+                const isAr = isArabic(shop.name);
+                const card = document.createElement('div');
+                card.className = 'card';
+                card.style.cursor = 'default';
+                card.innerHTML = `
+                    <div class="card-inner ${isAr ? '' : 'ltr-layout'}">
+                        <div class="card-title ${isAr ? 'rtl-text' : 'ltr-text'}">${shop.name}</div>
+                        <div class="card-action-btn" onclick="requestDelete('${shop.id}', 'shop')">
+                            <svg viewBox="0 0 24 24"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+                        </div>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        function requestDelete(id, type) {
+            document.getElementById('delete-target-id').value = id;
+            document.getElementById('delete-target-type').value = type;
+            openModal('confirm-delete-modal');
+        }
+
+        function executeDelete() {
+            const id = document.getElementById('delete-target-id').value;
+            const type = document.getElementById('delete-target-type').value;
+
+            if (type === 'region') {
+                regions = regions.filter(r => r.id !== id);
+                shops = shops.filter(s => s.regionId !== id); 
+                saveData();
+                renderDeleteRegions();
+            } else if (type === 'shop') {
+                shops = shops.filter(s => s.id !== id);
+                saveData();
+                renderDeleteShopsList();
+            }
+
+            closeModal('confirm-delete-modal');
+        }
+
+        // --- وظائف الإضافة والتعديل ---
+
+        function addRegion() {
+            const name = document.getElementById('new-region-name').value.trim();
+            if (!name) return;
+            regions.push({ id: generateId(), name: name });
+            saveData();
+            closeModal('add-region-modal');
+            renderRegions();
+        }
+
+        function saveRegionEdit() {
+            const id = document.getElementById('edit-region-id').value;
+            const newName = document.getElementById('edit-region-name').value.trim();
+            if (!newName) return;
+            const regionIndex = regions.findIndex(r => r.id === id);
+            if (regionIndex > -1) {
+                regions[regionIndex].name = newName;
+                saveData();
+                closeModal('edit-region-modal');
+                renderRegions();
+            }
+        }
+
+        // --- منطق القائمة المنسدلة المخصصة ---
+        function toggleCustomSelect() {
+            const wrapper = document.getElementById('custom-region-wrapper');
+            const dropdown = document.getElementById('custom-region-dropdown');
+            
+            if (!wrapper.classList.contains('disabled')) {
+                wrapper.classList.toggle('active');
+                dropdown.classList.toggle('show');
+            }
+        }
+
+        function openAddShopModal(preselectedRegionId = null) {
+            const dropdown = document.getElementById('custom-region-dropdown');
+            const display = document.getElementById('custom-region-display');
+            const hiddenInput = document.getElementById('shop-region-select');
+            const wrapper = document.getElementById('custom-region-wrapper');
+
+            // مسح وتجهيز
+            dropdown.innerHTML = '';
+            hiddenInput.value = '';
+            display.textContent = 'اختر المنطقة';
+            wrapper.classList.remove('disabled', 'active');
+            dropdown.classList.remove('show');
+
+            if(regions.length === 0) {
+                display.textContent = 'لا توجد مناطق مضافة';
+                wrapper.classList.add('disabled');
+            }
+
+            regions.forEach(r => {
+                const opt = document.createElement('div');
+                opt.className = 'custom-option';
+                opt.textContent = r.name;
+                opt.onclick = () => {
+                    hiddenInput.value = r.id;
+                    display.textContent = r.name;
+                    dropdown.classList.remove('show');
+                    wrapper.classList.remove('active');
+                };
+                dropdown.appendChild(opt);
+
+                // إذا كنا داخل منطقة معينة ومفتوح من الأسفل
+                if (preselectedRegionId && r.id === preselectedRegionId) {
+                    hiddenInput.value = r.id;
+                    display.textContent = r.name;
+                }
+            });
+
+            if (preselectedRegionId) {
+                wrapper.classList.add('disabled');
+            }
+
+            openModal('add-shop-modal');
+        }
+
+        function addShop() {
+            const regionId = document.getElementById('shop-region-select').value;
+            const name = document.getElementById('new-shop-name').value.trim();
+            const link = document.getElementById('new-shop-link').value.trim();
+            
+            if (!regionId || !name) {
+                return showCustomAlert("بيانات ناقصة", "يرجى اختيار المنطقة وكتابة اسم الصيدلية أولاً.", false);
+            }
+
+            shops.push({ id: generateId(), regionId: regionId, name: name, link: link, timestamp: new Date().toISOString() });
+            saveData();
+            closeModal('add-shop-modal');
+            
+            if (document.getElementById('region-screen').classList.contains('active')) renderShops();
+            else if (document.getElementById('main-screen').classList.contains('active')) renderRegions();
+        }
+
+        function saveShopEdit() {
+            const id = document.getElementById('edit-shop-id').value;
+            const newName = document.getElementById('edit-shop-name').value.trim();
+            const newLink = document.getElementById('edit-shop-link').value.trim();
+            if (!newName) return;
+
+            const shopIndex = shops.findIndex(s => s.id === id);
+            if (shopIndex > -1) {
+                shops[shopIndex].name = newName;
+                shops[shopIndex].link = newLink;
+                saveData();
+                closeModal('edit-shop-modal');
+                if (document.getElementById('region-screen').classList.contains('active')) renderShops();
+            }
+        }
+
+        // --- استرداد بيانات CSV ---
+        
+        function triggerCSVUpload() {
+            if (!currentRegionId) return showCustomAlert("خطأ", "الرجاء الدخول لمنطقة أولاً لاسترداد البيانات داخلها.", false);
+            document.getElementById('csv-file-input').click();
+        }
+
+        document.getElementById('csv-file-input').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const text = event.target.result;
+                const lines = text.split(/\r?\n/); 
+                
+                let addedCount = 0;
+                
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    if (!line || line.toUpperCase() === 'NAME,LINKMAP') continue; 
+
+                    const parts = line.split(',');
+                    if (parts.length >= 2) {
+                        const name = parts[0].trim();
+                        const link = parts.slice(1).join(',').trim();
+
+                        if (name) {
+                            shops.push({
+                                id: generateId(),
+                                regionId: currentRegionId,
+                                name: name,
+                                link: link,
+                                timestamp: new Date().toISOString()
+                            });
+                            addedCount++;
+                        }
+                    }
+                }
+
+                if (addedCount > 0) {
+                    saveData();
+                    if (document.getElementById('region-screen').classList.contains('active')) renderShops();
+                    showCustomAlert("اكتملت العملية", `تم استرداد وإضافة ${addedCount} صيدلية بنجاح.`, true);
+                } else {
+                    showCustomAlert("خطأ في الملف", "لم يتم العثور على بيانات صالحة. يرجى التأكد من أن الملف بصيغة: الاسم,الرابط", false);
+                }
+                
+                e.target.value = '';
+            };
+            
+            reader.readAsText(file);
+        });
+
+        // الإطلاق الأولي
+        window.onload = () => { renderRegions(); };
+
+        // --- الإضافات لحل مشكلة النقر المزدوج وتداخل الشاشات (دون حذف أي شيء) ---
+        let _isTransitioning = false;
+        const _originalSwitch = switchScreen;
+        
+        switchScreen = function(screenId) {
+            _isTransitioning = true;
+            _originalSwitch(screenId); // استدعاء الدالة الأصلية بشكل طبيعي
+            
+            // حظر النقرات الوهمية لمدة 400 ملي ثانية بعد الانتقال
+            setTimeout(() => {
+                _isTransitioning = false;
+            }, 400); 
+        };
+
+        const preventGhostClicks = (e) => {
+            if (_isTransitioning) {
+                e.stopPropagation(); // إيقاف الحدث ومنعه من اختراق الشاشة
+                e.preventDefault();
+            }
+        };
+
+        // التقاط واعتراض أحداث الماوس الوهمية التي يولدها الهاتف بعد اللمس
+        document.addEventListener('mousedown', preventGhostClicks, true);
+        document.addEventListener('mouseup', preventGhostClicks, true);
+        document.addEventListener('click', preventGhostClicks, true);
+        document.addEventListener('touchend', preventGhostClicks, true);
+
+    </script>
+</body>
+</html>
